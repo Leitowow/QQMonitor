@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "allianceauth-qqmonitor"
+version = "0.1.0"
+description = "QQ Monitor plugin for AllianceAuth"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+  { name = "LeitoWon" }
+]
+dependencies = [
+  "allianceauth>=5.0.0"
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["qqmonitor*"]
+
+[tool.setuptools.package-data]
+qqmonitor = ["templates/**/*.html", "static/**/*"]

@@ -1,0 +1,58 @@
+{% extends "allianceauth/base.html" %}
+{% load i18n %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="card border-secondary mb-3">
+  <div class="card-header">{% trans "QQ Monitor" %}</div>
+  <div class="card-body">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-success" role="alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger" role="alert">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <form method="post" class="mt-2">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="{{ form.qq_number.id_for_label }}" class="form-label">
+          {{ form.qq_number.label }} <span class="text-danger">*</span>
+        </label>
+        {{ form.qq_number }}
+        {% if form.qq_number.errors %}
+          <div class="text-danger small mt-1">{{ form.qq_number.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="{{ form.main_character_id.id_for_label }}" class="form-label">
+          {{ form.main_character_id.label }} <span class="text-danger">*</span>
+        </label>
+        {{ form.main_character_id }}
+        {% if form.main_character_id.errors %}
+          <div class="text-danger small mt-1">{{ form.main_character_id.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="{{ form.nickname.id_for_label }}" class="form-label">
+          {{ form.nickname.label }} <span class="text-danger">*</span>
+        </label>
+        {{ form.nickname }}
+        {% if form.nickname.errors %}
+          <div class="text-danger small mt-1">{{ form.nickname.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary">提交</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
