@@ -2,7 +2,7 @@
 
 ## 环境要求
 
-- AllianceAuth v5.x
+- AllianceAuth >=4.0.0
 - Python 3.11+
 
 ## 安装与启用
