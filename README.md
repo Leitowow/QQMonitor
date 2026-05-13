@@ -118,3 +118,126 @@ signature = hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest(
 
 print(timestamp, signature)
 ```
+
+---
+
+# QQMonitor Documentation (English)
+
+## Requirements
+
+- AllianceAuth >=4.0.0
+- Python 3.11+
+
+## Installation and Enablement
+
+1. Install the plugin (inside your AllianceAuth virtual environment):
+
+```bash
+pip install -e /path/to/QQMonitor
+```
+
+2. Enable the app in your AllianceAuth local settings:
+
+```python
+INSTALLED_APPS += [
+    "qqmonitor.apps.QqmonitorConfig",
+]
+```
+
+3. Run database migrations:
+
+```bash
+python manage.py migrate
+```
+
+4. Restart AllianceAuth.
+
+After restart, `QQ Monitor` will appear in the sidebar.
+
+## Page Usage
+
+1. Log in to AllianceAuth and open the `QQ Monitor` page.
+2. The page displays your current AllianceAuth main character name (read-only).
+3. On first use, fill in and submit:
+   - `QQ Number`
+   - `Nickname`
+4. After a successful submission, the page switches to read-only display of current binding data.
+5. To update data, click `Modify`, edit the fields, then click `Submit`.
+6. To discard changes, click `Cancel` to return to read-only mode.
+
+Notes:
+
+- Each AllianceAuth user keeps only one binding record.
+- `QQ Number` must be unique. Submission fails if it is already bound to another user.
+- When changing `QQ Number`, consider any downstream group-management policies.
+
+## External Verification API
+
+This API verifies whether a QQ number has a binding record.
+
+- Path: `/qqmonitor/api/v1/verify-qq/`
+- Method: `POST`
+- Body (JSON):
+
+```json
+{
+  "qq_number": "123456789"
+}
+```
+
+### API Configuration
+
+Add the following to your AllianceAuth local settings:
+
+```python
+QQMONITOR_API_TOKEN = "your-public-token"
+QQMONITOR_API_SECRET = "your-very-strong-secret"
+QQMONITOR_API_MAX_SKEW_SECONDS = 300  # Optional, default is 300 seconds
+```
+
+### Request Headers
+
+- `X-QQM-TOKEN`: must match `QQMONITOR_API_TOKEN`
+- `X-QQM-TIMESTAMP`: current Unix timestamp (seconds)
+- `X-QQM-SIGNATURE`: lowercase hex value of `hmac_sha256(secret, f"{token}.{timestamp}.{qq_number}")`
+
+### Response Fields
+
+- `exists`: whether the QQ record exists
+- `in_alliance`: whether the linked user is currently in alliance scope
+- `main_account_id`: main character ID in AllianceAuth
+- `main_character_name`: main character name in AllianceAuth
+- `nickname`: bound nickname
+
+Example response:
+
+```json
+{
+  "ok": true,
+  "qq_number": "123456789",
+  "exists": true,
+  "in_alliance": true,
+  "main_account_id": 2112345678,
+  "main_character_name": "Leito Main",
+  "nickname": "Leito",
+  "submitted_by_user_id": 42,
+  "current_alliance_id": 99000001
+}
+```
+
+### Python Signature Example
+
+```python
+import hashlib
+import hmac
+import time
+
+token = "your-public-token"
+secret = "your-very-strong-secret"
+qq_number = "123456789"
+timestamp = str(int(time.time()))
+message = f"{token}.{timestamp}.{qq_number}".encode("utf-8")
+signature = hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+print(timestamp, signature)
+```
