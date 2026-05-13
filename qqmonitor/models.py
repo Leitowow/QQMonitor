@@ -8,7 +8,6 @@ class QqMonitorEntry(models.Model):
     """User-submitted QQ monitor entry."""
 
     qq_number = models.CharField("QQ号", max_length=32)
-    main_character_id = models.BigIntegerField("主角色ID")
     nickname = models.CharField("昵称", max_length=64)
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -27,8 +26,12 @@ class QqMonitorEntry(models.Model):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["qq_number", "main_character_id"],
-                name="uq_qqmonitor_qq_and_main_character",
+                fields=["submitted_by"],
+                name="uq_qqmonitor_submitted_by_user",
+            ),
+            models.UniqueConstraint(
+                fields=["qq_number"],
+                name="uq_qqmonitor_qq_number",
             ),
         ]
 

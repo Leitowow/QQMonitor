@@ -17,17 +17,6 @@ class QqMonitorEntryForm(forms.Form):
             }
         ),
     )
-    main_character_id = forms.IntegerField(
-        label="主角色ID",
-        required=True,
-        min_value=1,
-        widget=forms.NumberInput(
-            attrs={
-                "class": "form-control",
-                "placeholder": "请输入主角色ID",
-            }
-        ),
-    )
     nickname = forms.CharField(
         label="昵称",
         max_length=64,

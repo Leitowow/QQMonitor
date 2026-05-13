@@ -9,7 +9,8 @@ import time
 from django.conf import settings
 from django.contrib import messages
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -24,34 +25,77 @@ logger = logging.getLogger(__name__)
 @main_character_required
 def index(request):
     """Plugin home page."""
+    user_entry = QqMonitorEntry.objects.filter(submitted_by=request.user).first()
+    profile = getattr(request.user, "profile", None)
+    main_character = getattr(profile, "main_character", None)
+    main_character_name = getattr(main_character, "character_name", "") if main_character else ""
+    has_main_character = bool(main_character)
+    has_binding = bool(user_entry and user_entry.qq_number and user_entry.nickname)
+    edit_mode = not has_binding
+
     if request.method == "POST":
-        form = QqMonitorEntryForm(request.POST)
-        if form.is_valid():
-            cleaned = form.cleaned_data
-            existing = QqMonitorEntry.objects.filter(
-                qq_number=cleaned["qq_number"],
-                main_character_id=cleaned["main_character_id"],
-            ).first()
-            old_nickname = existing.nickname if existing else None
-            _, created = QqMonitorEntry.objects.update_or_create(
-                qq_number=cleaned["qq_number"],
-                main_character_id=cleaned["main_character_id"],
-                defaults={"nickname": cleaned["nickname"], "submitted_by": request.user},
-            )
-            if created:
-                messages.success(request, "提交成功。")
+        action = request.POST.get("action", "save")
+        if action == "edit":
+            edit_mode = True
+            if user_entry:
+                form = QqMonitorEntryForm(
+                    initial={
+                        "qq_number": user_entry.qq_number,
+                        "nickname": user_entry.nickname,
+                    }
+                )
             else:
-                if old_nickname != cleaned["nickname"]:
-                    messages.success(request, "已存在同主角色记录，昵称已更新。")
+                form = QqMonitorEntryForm()
+        elif action == "cancel":
+            return redirect("qqmonitor:index")
+        else:
+            form = QqMonitorEntryForm(request.POST)
+            edit_mode = True
+            if not has_main_character:
+                form.add_error(
+                    None,
+                    "未检测到 AllianceAuth 主角色，无法提交绑定信息。",
+                )
+            elif form.is_valid():
+                cleaned = form.cleaned_data
+                try:
+                    _, created = QqMonitorEntry.objects.update_or_create(
+                        submitted_by=request.user,
+                        defaults={
+                            "qq_number": cleaned["qq_number"],
+                            "nickname": cleaned["nickname"],
+                        },
+                    )
+                except IntegrityError:
+                    form.add_error(
+                        None,
+                        "该 QQ号 已被其他用户占用，请确认后重试。",
+                    )
                 else:
-                    messages.success(request, "该记录已存在，信息保持不变。")
-            form = QqMonitorEntryForm()
+                    if created:
+                        messages.success(request, "提交成功，已为当前账号创建绑定。")
+                    else:
+                        messages.success(request, "提交成功，已更新你当前账号的绑定信息。")
+                    return redirect("qqmonitor:index")
     else:
-        form = QqMonitorEntryForm()
+        if user_entry:
+            form = QqMonitorEntryForm(
+                initial={
+                    "qq_number": user_entry.qq_number,
+                    "nickname": user_entry.nickname,
+                }
+            )
+        else:
+            form = QqMonitorEntryForm()
 
     context = {
         "page_title": "QQ Monitor",
         "form": form,
+        "main_character_name": main_character_name,
+        "has_main_character": has_main_character,
+        "user_entry": user_entry,
+        "has_binding": has_binding,
+        "edit_mode": edit_mode,
     }
     return render(request, "qqmonitor/index.html", context)
 
@@ -96,6 +140,14 @@ def _is_user_in_current_alliance(user, member_alliance_ids):
     # Fallback: if Member state's alliance list is empty, trust AA's assigned state.
     state_name = getattr(getattr(profile, "state", None), "name", "")
     return state_name.lower() == "member", alliance_id
+
+
+def _get_main_character_id_and_name(user):
+    profile = getattr(user, "profile", None)
+    main_character = getattr(profile, "main_character", None)
+    if not main_character:
+        return None, None
+    return getattr(main_character, "character_id", None), getattr(main_character, "character_name", None)
 
 
 @csrf_exempt
@@ -154,6 +206,7 @@ def api_verify_qq(request):
                 "exists": False,
                 "in_alliance": False,
                 "main_account_id": None,
+                "main_character_name": None,
                 "nickname": None,
             }
         )
@@ -171,15 +224,17 @@ def api_verify_qq(request):
         True,
         in_alliance,
     )
+    main_account_id, main_character_name = _get_main_character_id_and_name(user) if user else (None, None)
+
     return JsonResponse(
         {
             "ok": True,
             "qq_number": qq_number,
             "exists": True,
             "in_alliance": in_alliance,
-            "main_account_id": entry.main_character_id,
+            "main_account_id": main_account_id,
             "nickname": entry.nickname,
-            "main_character_id": entry.main_character_id,
+            "main_character_name": main_character_name,
             "submitted_by_user_id": user.id if user else None,
             "current_alliance_id": alliance_id,
         }

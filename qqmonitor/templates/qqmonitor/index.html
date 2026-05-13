@@ -19,40 +19,88 @@
       </div>
     {% endif %}
 
-    <form method="post" class="mt-2">
-      {% csrf_token %}
+    <div class="mt-2">
       <div class="mb-3">
-        <label for="{{ form.qq_number.id_for_label }}" class="form-label">
-          {{ form.qq_number.label }} <span class="text-danger">*</span>
+        <label class="form-label">
+          {% trans "AllianceAuth主角色" %}
         </label>
-        {{ form.qq_number }}
-        {% if form.qq_number.errors %}
-          <div class="text-danger small mt-1">{{ form.qq_number.errors|join:", " }}</div>
-        {% endif %}
+        <input
+          type="text"
+          class="form-control"
+          value="{% if main_character_name %}{{ main_character_name }}{% else %}{% trans '未找到主角色' %}{% endif %}"
+          readonly
+        />
       </div>
+      {% if not has_main_character %}
+        <div class="alert alert-warning" role="alert">
+          {% trans "未检测到 AllianceAuth 主角色，暂时无法提交绑定信息。" %}
+        </div>
+      {% endif %}
 
-      <div class="mb-3">
-        <label for="{{ form.main_character_id.id_for_label }}" class="form-label">
-          {{ form.main_character_id.label }} <span class="text-danger">*</span>
-        </label>
-        {{ form.main_character_id }}
-        {% if form.main_character_id.errors %}
-          <div class="text-danger small mt-1">{{ form.main_character_id.errors|join:", " }}</div>
-        {% endif %}
-      </div>
+      {% if has_binding and not edit_mode %}
+        <div class="mb-3">
+          <label class="form-label">{% trans "QQ号" %}</label>
+          <input type="text" class="form-control" value="{{ user_entry.qq_number }}" readonly />
+        </div>
 
-      <div class="mb-3">
-        <label for="{{ form.nickname.id_for_label }}" class="form-label">
-          {{ form.nickname.label }} <span class="text-danger">*</span>
-        </label>
-        {{ form.nickname }}
-        {% if form.nickname.errors %}
-          <div class="text-danger small mt-1">{{ form.nickname.errors|join:", " }}</div>
-        {% endif %}
-      </div>
+        <div class="mb-3">
+          <label class="form-label">{% trans "昵称" %}</label>
+          <input type="text" class="form-control" value="{{ user_entry.nickname }}" readonly />
+        </div>
 
-      <button type="submit" class="btn btn-primary">提交</button>
-    </form>
+        <form method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" name="action" value="edit" class="btn btn-outline-primary">{% trans "修改" %}</button>
+        </form>
+        <span class="text-danger ms-2">
+          注意！修改此QQ号码会导致原QQ号被踢出群聊
+        </span>
+      {% else %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="{{ form.qq_number.id_for_label }}" class="form-label">
+              {{ form.qq_number.label }} <span class="text-danger">*</span>
+            </label>
+            {{ form.qq_number }}
+            {% if form.qq_number.errors %}
+              <div class="text-danger small mt-1">{{ form.qq_number.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.nickname.id_for_label }}" class="form-label">
+              {{ form.nickname.label }} <span class="text-danger">*</span>
+            </label>
+            {{ form.nickname }}
+            {% if form.nickname.errors %}
+              <div class="text-danger small mt-1">{{ form.nickname.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <button
+            type="submit"
+            name="action"
+            value="save"
+            class="btn btn-primary"
+            {% if not has_main_character %}disabled{% endif %}
+          >
+            {% trans "提交" %}
+          </button>
+          {% if has_binding %}
+            <button
+              type="submit"
+              name="action"
+              value="cancel"
+              formnovalidate
+              class="btn btn-secondary"
+            >
+              {% trans "取消" %}
+            </button>
+          {% endif %}
+        </form>
+      {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}
